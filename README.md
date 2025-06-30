@@ -1,17 +1,17 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Aplikasi Jastip dengan Scan Barcode</title>
-<style>
-  body { font-family: Arial, sans-serif; padding: 20px; }
-  video { width: 100%; max-width: 400px; border: 1px solid #ccc; }
-  input, select, button { padding: 8px; margin: 8px 0; width: 100%; max-width: 400px; }
-  table { width: 100%; max-width: 600px; border-collapse: collapse; margin-top: 20px; }
-  th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-  th { background: #eee; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Aplikasi Jastip dengan Scan Barcode</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    video { width: 100%; max-width: 400px; border: 1px solid #ccc; }
+    input, select, button { padding: 8px; margin: 8px 0; width: 100%; max-width: 400px; }
+    table { width: 100%; max-width: 600px; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background: #eee; }
+  </style>
 </head>
 <body>
 
@@ -56,35 +56,37 @@
   const codeReader = new ZXing.BrowserBarcodeReader();
   const videoElement = document.getElementById('video');
   const resiInput = document.getElementById('resi');
+  const namaInput = document.getElementById('nama');
   const codSelect = document.getElementById('cod');
   const nominalInput = document.getElementById('nominalCOD');
   const packageForm = document.getElementById('packageForm');
 
+  // Aktifkan atau nonaktifkan input nominal COD
   codSelect.addEventListener('change', () => {
-    if (codSelect.value === 'Ya') {
-      nominalInput.disabled = false;
-      nominalInput.required = true;
-    } else {
-      nominalInput.disabled = true;
-      nominalInput.required = false;
-      nominalInput.value = 0;
-    }
+    const isCOD = codSelect.value === 'Ya';
+    nominalInput.disabled = !isCOD;
+    nominalInput.required = isCOD;
+    if (!isCOD) nominalInput.value = 0;
   });
 
+  // Mulai kamera untuk scan barcode
   codeReader.decodeFromVideoDevice(null, videoElement, (result, err) => {
     if (result) {
       resiInput.value = result.text;
     }
   });
 
+  // Fungsi untuk load data dari localStorage
   function loadPackages() {
     return JSON.parse(localStorage.getItem('packages')) || [];
   }
 
+  // Simpan data ke localStorage
   function savePackages(data) {
     localStorage.setItem('packages', JSON.stringify(data));
   }
 
+  // Tampilkan data ke tabel
   function renderPackages() {
     const data = loadPackages();
     const tbody = document.querySelector('#packageTable tbody');
@@ -101,10 +103,11 @@
     });
   }
 
+  // Tangani form submit
   packageForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const resi = resiInput.value.trim();
-    const nama = document.getElementById('nama').value.trim();
+    const nama = namaInput.value.trim();
     const cod = codSelect.value;
     const nominalCOD = cod === 'Ya' ? Number(nominalInput.value) : 0;
 
@@ -112,22 +115,31 @@
       alert('Nomor resi dan nama pemilik wajib diisi!');
       return;
     }
+
     if (cod === 'Ya' && nominalCOD <= 0) {
       alert('Nominal COD harus lebih dari 0 jika COD Ya!');
       return;
     }
 
     const data = loadPackages();
+    const duplicate = data.some(p => p.resi === resi);
+    if (duplicate) {
+      alert('Nomor resi sudah terdaftar!');
+      return;
+    }
+
     data.push({ resi, nama, cod, nominalCOD });
     savePackages(data);
     renderPackages();
 
-    resiInput.value = '';
-    packageForm.reset();
-    nominalInput.disabled = true;
+    // Reset form (kecuali input resi)
+    namaInput.value = '';
+    codSelect.value = 'Tidak';
     nominalInput.value = 0;
+    nominalInput.disabled = true;
   });
 
+  // Render data saat halaman dimuat
   renderPackages();
 </script>
 
